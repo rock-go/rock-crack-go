@@ -37,10 +37,20 @@ func (c *config) Index(L *lua.LState , key string , val lua.LValue) {
 
 
 func newConfig(L *lua.LState) *config {
-	tab := L.CheckTable(1)
+	val := L.Get(1)
 	cfg := &config{}
 
-	tab.Range(func(key string, val lua.LValue) { cfg.Index(L , key , val) })
+	switch val.Type() {
+	case lua.LTString:
+		cfg.name = auxlib.CheckProcName(val , L)
+
+	case lua.LTTable:
+		val.(*lua.LTable).Range(func(key string, val lua.LValue) { cfg.Index(L , key , val) })
+
+	default:
+		L.RaiseError("invalid config type must string or table , got %s" , val.Type().String())
+		return nil
+	}
 
 	if e := cfg.verify(); e != nil {
 		L.RaiseError("%v", e)
@@ -48,4 +58,5 @@ func newConfig(L *lua.LState) *config {
 	}
 
 	return cfg
+
 }

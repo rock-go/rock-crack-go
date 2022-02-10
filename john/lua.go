@@ -13,6 +13,12 @@ var xEnv *xbase.EnvT
 	end
 
 
+	local john = crack.john{
+		name = "shadow",
+		dict = "share/dict/pass.dict",
+		pipe = handle
+	}
+
 	local john = crack.john("shadow")
          .dict("share/dict/pass.dict")
          .pipe(handle)

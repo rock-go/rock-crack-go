@@ -35,6 +35,11 @@ func (j *john) Close() error {
 	return nil
 }
 
+func (j *john) ret(L *lua.LState) int {
+	L.Push(L.NewLightUserData(j))
+	return 1
+}
+
 func (j *john) compareVM(co1 *lua.LState , co2 *lua.LState) bool {
 	if co1 == nil || co2 == nil {
 		return false
@@ -121,14 +126,14 @@ func (j *john) sha512(raw string) {
 
 func (j *john) pipe(L *lua.LState) int {
 	j.cfg.pipe = L.IsFunc(1)
-	return 0
+	return j.ret(L)
 }
 
 func (j *john) dict(L *lua.LState) int {
 	//1. 判断是ext 后缀是否为 txt dict 等文件路径
 	//2. 如果是文件 运行时打开io
 	//3. 如果是文本 运行是 strings.NewReader("xxxxx")
-	return 0
+	return j.ret(L)
 }
 
 func (j *john) attack(method uint8 , raw string) {
