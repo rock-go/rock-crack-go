@@ -28,11 +28,11 @@ var xEnv *xbase.EnvT
 	john.sha256("xxx")
 	john.sha512("xxxxxx")
 
- */
+*/
 
 func newLuaCrackJohn(L *lua.LState) int {
 	cfg := newConfig(L)
-	proc := L.NewProc(cfg.name , fileTypeOf)
+	proc := L.NewProc(cfg.name, fileTypeOf)
 	if proc.IsNil() {
 		proc.Set(newJohn(cfg))
 
@@ -41,11 +41,11 @@ func newLuaCrackJohn(L *lua.LState) int {
 		xEnv.Free(obj.cfg.co)
 		obj.cfg = cfg
 	}
-
-	return 0
+	L.Push(proc)
+	return 1
 }
 
-func Constructor(env *xbase.EnvT , ck lua.UserKV) {
+func Constructor(env *xbase.EnvT, ck lua.UserKV) {
 	xEnv = env
-	ck.Set("john" , lua.NewFunction(newLuaCrackJohn))
+	ck.Set("john", lua.NewFunction(newLuaCrackJohn))
 }

@@ -9,19 +9,20 @@ type config struct {
 	speed int
 	name  string
 	dict  string
+	salt  string
 
-	co    *lua.LState
-	pipe  *lua.LFunction
+	co   *lua.LState
+	pipe *lua.LFunction
 }
 
 func (c config) verify() interface{} {
 	return nil
 }
 
-func (c *config) Index(L *lua.LState , key string , val lua.LValue) {
+func (c *config) Index(L *lua.LState, key string, val lua.LValue) {
 	switch key {
 	case "name":
-		c.name = auxlib.CheckProcName(val , L)
+		c.name = auxlib.CheckProcName(val, L)
 
 	case "speed":
 		c.speed = lua.IsInt(val)
@@ -29,26 +30,33 @@ func (c *config) Index(L *lua.LState , key string , val lua.LValue) {
 	case "dict":
 		c.dict = lua.IsString(val)
 
+	case "pipe":
+		c.pipe = lua.IsFunc(val)
+
+	case "salt":
+		c.salt = lua.IsString(val)
+
 	default:
 		L.RaiseError("invalid %s field", key)
 		return
 	}
 }
 
-
 func newConfig(L *lua.LState) *config {
 	val := L.Get(1)
-	cfg := &config{}
+	cfg := &config{
+		co: xEnv.Clone(L),
+	}
 
 	switch val.Type() {
 	case lua.LTString:
-		cfg.name = auxlib.CheckProcName(val , L)
+		cfg.name = auxlib.CheckProcName(val, L)
 
 	case lua.LTTable:
-		val.(*lua.LTable).Range(func(key string, val lua.LValue) { cfg.Index(L , key , val) })
+		val.(*lua.LTable).Range(func(key string, val lua.LValue) { cfg.Index(L, key, val) })
 
 	default:
-		L.RaiseError("invalid config type must string or table , got %s" , val.Type().String())
+		L.RaiseError("invalid config type must string or table , got %s", val.Type().String())
 		return nil
 	}
 
