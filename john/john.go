@@ -157,7 +157,6 @@ func (j *john) shadow(raw string) {
 	default:
 		panic("nil cryp")
 	}
-
 	//获取加密shadow
 	passhash := strings.Split(raw, ":")
 	if len(passhash) < 4 {
