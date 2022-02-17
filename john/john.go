@@ -118,10 +118,10 @@ func (j *john) call(ev *audit.Event) {
 func (j *john) ifdictpath() bool {
 	filestr := j.cfg.dict
 	file := strings.Split(filestr, ".")
-	if len(file) == 1 {
-		return false
+	if len(file) == 2 {
+		return true
 	}
-	return true
+	return false
 }
 
 func (j *john) shadow(raw string) {
