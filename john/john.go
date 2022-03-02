@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/rock-go/rock/audit"
 	"github.com/rock-go/rock/lua"
+	"github.com/rock-go/rock/pipe"
 	"github.com/tredoe/osutil/user/crypt"
 	"github.com/tredoe/osutil/user/crypt/md5_crypt"
 	"github.com/tredoe/osutil/user/crypt/sha256_crypt"
@@ -108,20 +109,18 @@ func (j *john) call(ev *audit.Event) {
 	if j.cfg.pipe == nil {
 		return
 	}
-	cp := xEnv.P(j.cfg.pipe)
-	co := xEnv.Clone(j.cfg.co)
-	defer xEnv.Free(co)
-	err := co.CallByParam(cp, ev)
-	xEnv.Errorf("%v", err)
+	pipe.Do(j.cfg.pipe, ev, j.cfg.co, func(err error) {
+		xEnv.Errorf("%s pipe call fail %v", j.Name(), err)
+	})
 }
 
 func (j *john) ifdictpath() bool {
-	filestr := j.cfg.dict
-	file := strings.Split(filestr, ".")
-	if len(file) == 2 {
-		return true
+	passf, err := os.Open(j.cfg.dict)
+	if err != nil {
+		return false
 	}
-	return false
+	defer passf.Close()
+	return true
 }
 
 func (j *john) shadow(raw string) {
@@ -182,23 +181,20 @@ func (j *john) shadow(raw string) {
 func (j *john) checkshadow(crypt crypt.Crypter, hashedpass string, salt string) (error, bool, string) {
 	var ismatch bool
 	var plain string
-	if j.ifdictpath() {
-		passf, err := os.Open(j.cfg.dict)
-		if err != nil {
-			return err, false, ""
-		}
-		defer passf.Close()
-		passfsc := bufio.NewScanner(passf)
-		for passfsc.Scan() {
-			err, ismatch, plain = checkshadowstr(crypt, hashedpass, salt, passfsc.Text())
-			if ismatch {
-				return nil, true, plain
-			}
-		}
-		return nil, false, ""
-	} else {
+
+	passf, err := os.Open(j.cfg.dict)
+	defer passf.Close()
+	if err != nil {
 		return checkshadowstr(crypt, hashedpass, salt, j.cfg.dict)
 	}
+	passfsc := bufio.NewScanner(passf)
+	for passfsc.Scan() {
+		err, ismatch, plain = checkshadowstr(crypt, hashedpass, salt, passfsc.Text())
+		if ismatch {
+			return nil, true, plain
+		}
+	}
+	return nil, false, ""
 }
 
 func checkshadowstr(crypt crypt.Crypter, hashed string, salt string, plainpass string) (error, bool, string) {
@@ -216,25 +212,19 @@ func (j *john) checkcrypt(h hash.Hash, raw string) (bool, string) {
 	var ismatch bool
 	var plain string
 
-	//爆破密码字典文件
-	if j.ifdictpath() {
-		passf, err := os.Open(j.cfg.dict)
-		if err != nil {
-			return false, err.Error()
-		}
-		defer passf.Close()
-		passfsc := bufio.NewScanner(passf)
-		for passfsc.Scan() {
-			ismatch, plain = j.checkcryptstr(h, passfsc.Text(), raw)
-			if ismatch == true {
-				return true, plain
-			}
-		}
-		return false, ""
-	} else {
-		//爆破单个密码
+	passf, err := os.Open(j.cfg.dict)
+	defer passf.Close()
+	if err != nil {
 		return j.checkcryptstr(h, j.cfg.dict, raw)
 	}
+	passfsc := bufio.NewScanner(passf)
+	for passfsc.Scan() {
+		ismatch, plain = j.checkcryptstr(h, passfsc.Text(), raw)
+		if ismatch == true {
+			return true, plain
+		}
+	}
+	return false, ""
 }
 
 func (j *john) checkcryptstr(h hash.Hash, src string, raw string) (bool, string) {
@@ -299,8 +289,13 @@ func (j *john) sha512(raw string) {
 }
 
 func (j *john) pipe(L *lua.LState) int {
-	j.cfg.pipe = L.IsFunc(1)
-	return j.ret(L)
+	pv := pipe.LValue(L.Get(1))
+	if pv == nil {
+		return 0
+	}
+
+	j.cfg.pipe = append(j.cfg.pipe, pv)
+	return 0
 }
 
 func (j *john) dict(L *lua.LState) int {

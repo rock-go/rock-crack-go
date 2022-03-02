@@ -23,6 +23,8 @@ var xEnv *xbase.EnvT
          .dict("share/dict/pass.dict")
          .pipe(handle)
 
+	john.pipe(_(ev) std.out.println(tostring(ev) ) end)
+
 	john.shadow("$1$xxx")
 	john.md5("xxxx")
 	john.sha256("xxx")

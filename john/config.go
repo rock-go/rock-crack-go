@@ -3,6 +3,7 @@ package john
 import (
 	"github.com/rock-go/rock/auxlib"
 	"github.com/rock-go/rock/lua"
+	"github.com/rock-go/rock/pipe"
 )
 
 type config struct {
@@ -12,7 +13,7 @@ type config struct {
 	salt  string
 
 	co   *lua.LState
-	pipe *lua.LFunction
+	pipe []pipe.Pipe
 }
 
 func (c config) verify() interface{} {
@@ -31,7 +32,11 @@ func (c *config) Index(L *lua.LState, key string, val lua.LValue) {
 		c.dict = lua.IsString(val)
 
 	case "pipe":
-		c.pipe = lua.IsFunc(val)
+		if pv := pipe.LValue(val); val == nil {
+			L.RaiseError("invalid pipe type")
+		} else {
+			c.pipe = []pipe.Pipe{pv}
+		}
 
 	case "salt":
 		c.salt = lua.IsString(val)
