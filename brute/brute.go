@@ -1,6 +1,7 @@
 package brute
 
 import (
+	"fmt"
 	"github.com/rock-go/rock/cidr"
 	"github.com/rock-go/rock/lua"
 	"github.com/rock-go/rock/pipe"
@@ -82,14 +83,28 @@ func (b *brute) async() {
 }
 
 func (b *brute) Start() error {
+	b.tom = new(tomb.Tomb)
+	b.queue = make(chan Tx , 1)
+
+	for i := 0 ; i < b.cfg.thread ; i++ {
+		go b.thread(i)
+	}
+
 	return nil
 }
 
 func (b *brute) Close() error {
+	b.tom.Kill(fmt.Errorf("close"))
+	close(b.queue)
 	return nil
 }
 
 func (b *brute) thread(idx int) {
+	xEnv.Errorf("b thread %d start" , idx)
+	defer func() {
+		xEnv.Errorf("b thread %d close" , idx)
+	}()
+
 	for tx := range b.queue {
 		ev := &event{
 			ip: tx.ip.String(),
@@ -126,5 +141,4 @@ func (b *brute) thread(idx int) {
 		done:
 		b.verbose(ev)
 	}
-
 }

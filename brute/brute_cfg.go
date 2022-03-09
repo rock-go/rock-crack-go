@@ -38,6 +38,7 @@ func (c *config) Index(L *lua.LState, key string, val lua.LValue) {
 func newConfig(L *lua.LState) *config {
 	val := L.Get(1)
 	cfg := &config{
+		thread: 5,
 		co: xEnv.Clone(L),
 	}
 
