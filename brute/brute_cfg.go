@@ -13,8 +13,8 @@ type config struct {
 	thread  int
 	dict    Dict
 	co      *lua.LState
-	succeed []pipe.Pipe
-	verbose []pipe.Pipe
+	succeed []pipe.Fn
+	verbose []pipe.Fn
 
 	cidr    []*cidr.T
 	service []service
@@ -28,6 +28,8 @@ func (c *config) Index(L *lua.LState, key string, val lua.LValue) {
 	switch key {
 	case "name":
 		c.name = auxlib.CheckProcName(val, L)
+	case "server":
+		c.service = append(c.service)
 
 	default:
 		L.RaiseError("invalid %s field", key)
@@ -38,8 +40,8 @@ func (c *config) Index(L *lua.LState, key string, val lua.LValue) {
 func newConfig(L *lua.LState) *config {
 	val := L.Get(1)
 	cfg := &config{
-		thread: 5,
-		co: xEnv.Clone(L),
+		thread: 50,
+		co:     xEnv.Clone(L),
 	}
 
 	switch val.Type() {

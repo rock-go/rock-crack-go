@@ -2,59 +2,136 @@ package brute
 
 import (
 	"bufio"
+	"errors"
 	"github.com/rock-go/rock/auxlib"
 	"io"
 	"os"
 )
 
 type iteratorM2 struct {
-	u        *bufio.Reader
-	p        *bufio.Reader
+	Super
+	filem *fileM
 
-	uFile    *os.File
-	pFile    *os.File
+	uinit *bufio.Reader
+	pinit *bufio.Reader
 
-	name     string
-	pass     string
+	u *bufio.Reader
+	p *bufio.Reader
 
-	ue       error
-	pe       error
+	size  int
+	uFile *os.File
+	pFile *os.File
+
+	name string
+	pass string
+
+	ue error
+	pe error
 }
 
 type fileM struct {
-	user  string
-	pass  string
+	userf string
+	passf string
+}
+
+func (iter *iteratorM2) Updatef(filem *fileM) {
+	if iter.filem == nil {
+		iter.filem = filem
+		goto end
+	}
+	if filem.userf != "" {
+		iter.filem.userf = filem.userf
+	}
+	if filem.passf != "" {
+		iter.filem.passf = filem.passf
+	}
+end:
+	iter.Iterator()
+
 }
 
 func (f *fileM) Iterator() *iteratorM2 {
-	iter := &iteratorM2{}
+	return &iteratorM2{
+		u: nil,
+		p: nil,
 
-	u , ue := os.Open(f.user)
-	if ue == nil {
-		iter.u = bufio.NewReaderSize(u , 64)
+		uinit: nil,
+		pinit: nil,
+
+		ue: errors.New("init"),
+		pe: errors.New("init"),
+
+		size:  10240,
+		uFile: nil,
+		pFile: nil,
+		filem: f,
+	}
+}
+
+func (iter *iteratorM2) Iterator() Iterator {
+	//iter := &iteratorM2{}
+
+	if iter.uFile != nil && iter.ue == nil {
+		goto pp
+	}
+
+	iter.uFile, iter.ue = os.Open(iter.filem.userf) //close??
+	if iter.ue == nil {
+		stat, _ := iter.uFile.Stat()
+		println(int(stat.Size()))
+		iter.u = bufio.NewReaderSize(iter.uFile, int(stat.Size())+1024)
+		//iter.uinit = bufio.NewReaderSize(iter.uFile , 64)
 		iter.ru()
+	} else {
+		iter.uFile = nil
+		iter.uFile.Close()
 	}
 
-	p , pe := os.Open(f.pass)
-	if pe == nil {
-		iter.p = bufio.NewReaderSize(p , 64)
+pp:
+	if iter.pFile != nil && iter.pe == nil {
+		goto end
 	}
 
-	iter.uFile = u
-	iter.pFile = p
-	iter.ue = ue
-	iter.pe = pe
+	iter.pFile, iter.pe = os.Open(iter.filem.passf)
+	if iter.pe == nil {
+		stat, _ := iter.pFile.Stat()
+		println(int(stat.Size()))
+		iter.p = bufio.NewReaderSize(iter.pFile, int(stat.Size())+1024)
+		//iter.pinit = iter.p
+	} else {
+		iter.pFile = nil
+		iter.pFile.Close()
+	}
+
+end:
+	//iter.uFile = u
+	//iter.pFile = p
+	//iter.ue = ue
+	//iter.pe = pe
 	return iter
 }
 
-func (iter *iteratorM2) ru() error {
+func (iter *iteratorM2) restp() { //重置密码文件
+	iter.pFile, iter.pe = os.Open(iter.filem.passf)
+	if iter.pe == nil {
+		stat, _ := iter.pFile.Stat()
+		println(int(stat.Size()))
+		iter.p = bufio.NewReaderSize(iter.pFile, int(stat.Size())+1024)
+		//iter.pinit = iter.p
+	} else {
+		iter.pFile = nil
+		iter.pFile.Close()
+	}
+}
+
+func (iter *iteratorM2) ru() error { //readuserfile
 	if iter.u == nil || iter.ue != nil {
 		return iter.ue
 	}
 
-	name , err := iter.u.ReadBytes('\n')
+	name, err := iter.u.ReadBytes('\n')
 	if err == nil {
-		iter.name = auxlib.B2S(name[1:])
+		iter.name = auxlib.B2S(name[0 : len(name)-2])
 		return nil
 	}
 
@@ -62,23 +139,27 @@ func (iter *iteratorM2) ru() error {
 	return err
 }
 
-func (iter *iteratorM2) pu() error {
+func (iter *iteratorM2) rp() error {
 	if iter.p == nil || iter.pe != nil {
 		return iter.pe
 	}
 
-	pass , err := iter.u.ReadBytes('\n')
+	pass, err := iter.p.ReadBytes('\n')
 	if err == nil {
-		iter.pass = auxlib.B2S(pass[1:])
+		iter.pass = auxlib.B2S(pass[0 : len(pass)-2])
 		return nil
 	}
 
+	//println(err.Error())
 	iter.pe = err
 	return err
 }
 
 func (iter *iteratorM2) SkipU() {
 	iter.ru()
+	iter.p = nil
+	iter.pFile.Close()
+	iter.restp()
 }
 
 func (iter *iteratorM2) Skip() {
@@ -89,20 +170,24 @@ func (iter *iteratorM2) Skip() {
 }
 
 func (iter *iteratorM2) Next() dictEntry {
-
 next:
 	if iter.ue != nil {
-		return dictEntry{ over: true }
+		return dictEntry{over: true}
 	}
 
-	err := iter.pu()
+	err := iter.rp()
 	if err == nil {
-		return dictEntry{ name: iter.name, pass: iter.pass, over: false }
+		return dictEntry{name: iter.name, pass: iter.pass, over: false}
 	}
 
 	if err == io.EOF {
 		//下一个用户名
 		iter.ru()
+		iter.p = nil
+		iter.pFile.Close()
+		iter.restp()
+		//iter.pe = nil
+
 		goto next
 	}
 

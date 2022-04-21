@@ -2,14 +2,14 @@ package brute
 
 import "github.com/rock-go/rock/lua"
 
-
 func toPort(L *lua.LState) int {
+	println("top:", L.GetTop())
 	p := L.IsInt(1)
 	if p > 0 && p < 65535 {
 		return p
 	}
 
-	L.RaiseError("invalid port %d" , p)
+	L.RaiseError("invalid port %d", p)
 	return p
 }
 
@@ -28,15 +28,15 @@ func checkServicePorts(L *lua.LState) []int {
 			return
 		}
 
-		if _ , ok := tmp[p]; ok {
+		if _, ok := tmp[p]; ok {
 			return
 		}
 
 		tmp[p] = struct{}{}
-		ports = append(ports , p)
+		ports = append(ports, p)
 	}
 
-	for i := 1 ; i <= n ; i++ {
+	for i := 1; i <= n; i++ {
 		val := L.Get(i)
 
 		switch val.Type() {

@@ -3,24 +3,40 @@ package brute
 import (
 	"github.com/rock-go/rock/lua"
 	"net"
+	"strconv"
+	"time"
 )
 
 type Authenticate interface {
 	Name() string
 	Login(*event)
-	Index(*lua.LState , string) lua.LValue
+	//Index(*lua.LState , string) lua.LValue
 }
 
 type service struct {
-	skip    bool
-	port    int
-	ping    bool
-	auth    Authenticate
+	Super
+	skip bool
+	port int
+	ping bool
+	auth Authenticate
 }
 
-func newService(L *lua.LState , auth Authenticate) service {
+//func (s *service) Start() error {
+//	panic("implement me")
+//}
+//
+//func (s *service) Close() error {
+//	panic("implement me")
+//}
+
+func newService(L *lua.LState, auth Authenticate, port int) service {
+	if port > 65535 || port <= 0 {
+		L.RaiseError("invalid port %d", port)
+		return service{}
+	}
+
 	return service{
-		port: toPort(L) ,
+		port: port,
 		skip: true,
 		ping: true,
 		auth: auth,
@@ -33,6 +49,14 @@ func (s *service) Ping(ip net.IP) bool {
 	}
 
 	//写ping逻辑
+	host := ip.String() + ":" + strconv.Itoa(s.port)
+	var d net.Dialer
+	d.Timeout = time.Duration(3) * time.Second
+	_, err := d.Dial("tcp", host)
+	if err != nil {
+		return false
+	}
+
 	return true
 }
 

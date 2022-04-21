@@ -10,7 +10,6 @@ var xEnv *xbase.EnvT
 
 var typeof = reflect.TypeOf((*brute)(nil)).String()
 
-
 /*
 	local kfk = kafka.producer{}
 	local b = crack.brute("crack").use("root" , "admin").pass("123456" , "780123").pipe(kfk)
@@ -55,7 +54,7 @@ var typeof = reflect.TypeOf((*brute)(nil)).String()
 	-----------------------------------------------------------
 	{ip , io.reader , io.reader} , {ip , io.reader , io.reader}
     -----------------------------------------------------------
- */
+*/
 
 func bruteL(L *lua.LState) int {
 	cfg := newConfig(L)
@@ -70,7 +69,7 @@ func bruteL(L *lua.LState) int {
 	}
 	L.Push(proc)
 
-	return 0
+	return 1
 }
 
 func Constructor(env *xbase.EnvT, ck lua.UserKV) {

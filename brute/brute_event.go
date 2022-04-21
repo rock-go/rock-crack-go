@@ -6,13 +6,13 @@ import (
 )
 
 type event struct {
-	ip       string
-	port     int
-	user     string
-	pass     string
-	stat     State
-	service  string
-	banner   string
+	ip      string
+	port    int
+	user    string
+	pass    string
+	stat    State
+	service string
+	banner  string
 }
 
 func (ev *event) ToLValue() lua.LValue {
@@ -21,4 +21,4 @@ func (ev *event) ToLValue() lua.LValue {
 
 func (ev *event) Server() string {
 	return ev.ip + ":" + strconv.Itoa(ev.port)
- }
+}
